@@ -15,6 +15,17 @@ def _resolve_repository(repo_path: Any):
     return get_repository(safe_repo_path)
 
 
+def _filter_commits_by_author(commits: list[dict], author: str | None) -> list[dict]:
+    if author is None:
+        return commits
+    author_key = author.strip().casefold()
+    return [
+        commit
+        for commit in commits
+        if str(commit.get("author", "")).strip().casefold() == author_key
+    ]
+
+
 @server.tool()
 def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) -> list[dict]:
     """Rank risky files by recent change volume and contributor spread."""
@@ -65,7 +76,8 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
 def analyze_commit_patterns(repo_path: str, days: int = 30, author: str | None = None) -> dict:
     """Summarize commit count, average file spread, and author participation."""
     repository = _resolve_repository(repo_path)
-    commits = repository.get_commits(days=days, author=author)
+    commits = repository.get_commits(days=days, author=None)
+    commits = _filter_commits_by_author(commits, author)
 
     author_counts: dict[str, int] = defaultdict(int)
     total_files = 0
