@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Any
 
 from app import server
-from git_utils import get_repository
+from git_utils import get_repository, is_repository_like
 from security import validate_repo_path
+
+
+def _resolve_repository(repo_path: Any):
+    if is_repository_like(repo_path):
+        return repo_path
+    safe_repo_path = validate_repo_path(repo_path)
+    return get_repository(safe_repo_path)
 
 
 @server.tool()
 def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) -> list[dict]:
     """Rank risky files by recent change volume and contributor spread."""
-    safe_repo_path = validate_repo_path(repo_path)
-    repository = get_repository(safe_repo_path)
+    repository = _resolve_repository(repo_path)
     commits = repository.get_commits(days=days, branch=branch)
 
     file_metrics: dict[str, dict[str, object]] = {}
@@ -57,8 +64,7 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
 @server.tool()
 def analyze_commit_patterns(repo_path: str, days: int = 30, author: str | None = None) -> dict:
     """Summarize commit count, average file spread, and author participation."""
-    safe_repo_path = validate_repo_path(repo_path)
-    repository = get_repository(safe_repo_path)
+    repository = _resolve_repository(repo_path)
     commits = repository.get_commits(days=days, author=author)
 
     author_counts: dict[str, int] = defaultdict(int)

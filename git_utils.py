@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 try:
     from git import Repo
@@ -57,11 +58,17 @@ class GitRepository:
         }
 
 
-def get_repository(repo_path: str) -> GitRepository | MockGitRepository:
+def is_repository_like(value: Any) -> bool:
+    return hasattr(value, "get_commits") and hasattr(value, "get_summary")
+
+
+def get_repository(repo_path: str | GitRepository | MockGitRepository) -> GitRepository | MockGitRepository:
+    if is_repository_like(repo_path):
+        return repo_path
     return GitRepository(repo_path)
 
 
-def get_repository_summary(repo_path: str) -> dict:
+def get_repository_summary(repo_path: str | GitRepository | MockGitRepository) -> dict:
     return get_repository(repo_path).get_summary()
 
 
