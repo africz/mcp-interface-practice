@@ -15,36 +15,67 @@ def _resolve_repository(repo_path: Any):
     return get_repository(safe_repo_path)
 
 
-def _extract_commit_author(commit: dict) -> str:
-    raw_author = commit.get("author", "")
-    if isinstance(raw_author, dict):
-        for key in ("name", "author", "login", "email"):
-            value = raw_author.get(key)
-            if value:
-                raw_author = value
-                break
+def _get_value(source: Any, key: str, default: Any = None) -> Any:
+    if isinstance(source, dict):
+        return source.get(key, default)
+    return getattr(source, key, default)
+
+
+def _normalize_author_text(value: Any) -> str:
+    text = str(value).strip()
+    if "<" in text:
+        text = text.split("<", 1)[0].strip()
+    return text
+
+
+def _author_candidates(commit: Any) -> list[str]:
+    candidates: list[str] = []
+
+    for key in ("author", "author_name", "name", "login", "username", "user"):
+        value = _get_value(commit, key)
+        if not value:
+            continue
+        if isinstance(value, dict):
+            for nested_key in ("name", "author", "login", "username", "email"):
+                nested_value = value.get(nested_key)
+                if nested_value:
+                    candidates.append(_normalize_author_text(nested_value))
         else:
-            raw_author = ""
+            candidates.append(_normalize_author_text(value))
 
-    author_text = str(raw_author).strip()
-    if "<" in author_text:
-        author_text = author_text.split("<", 1)[0].strip()
-    return author_text
+    nested_commit = _get_value(commit, "commit")
+    if nested_commit:
+        nested_author = _get_value(nested_commit, "author")
+        if nested_author:
+            for nested_key in ("name", "author", "login", "username", "email"):
+                nested_value = _get_value(nested_author, nested_key)
+                if nested_value:
+                    candidates.append(_normalize_author_text(nested_value))
+
+    normalized = [candidate for candidate in candidates if candidate]
+    if not normalized:
+        return [""]
+    return list(dict.fromkeys(normalized))
 
 
-def _author_matches(commit: dict, author: str) -> bool:
+def _extract_commit_author(commit: Any) -> str:
+    return _author_candidates(commit)[0]
+
+
+def _author_matches(commit: Any, author: str) -> bool:
     author_key = author.strip().casefold()
-    commit_author = _extract_commit_author(commit)
-    commit_key = commit_author.casefold()
-    full_key = str(commit.get("author", "")).strip().casefold()
-    return (
-        commit_key == author_key
-        or full_key == author_key
-        or full_key.startswith(f"{author_key} <")
-    )
+    for candidate in _author_candidates(commit):
+        candidate_key = candidate.casefold()
+        if (
+            candidate_key == author_key
+            or candidate_key.startswith(f"{author_key} ")
+            or candidate_key.startswith(f"{author_key}<")
+        ):
+            return True
+    return False
 
 
-def _filter_commits_by_author(commits: list[dict], author: str | None) -> list[dict]:
+def _filter_commits_by_author(commits: list[Any], author: str | None) -> list[Any]:
     if author is None:
         return commits
     return [commit for commit in commits if _author_matches(commit, author)]
@@ -59,8 +90,8 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
     file_metrics: dict[str, dict[str, object]] = {}
     for commit in commits:
         author = _extract_commit_author(commit)
-        for file_change in commit["files"]:
-            path = file_change["path"]
+        for file_change in _get_value(commit, "files", []) or []:
+            path = _get_value(file_change, "path", "")
             metric = file_metrics.setdefault(
                 path,
                 {
@@ -107,7 +138,7 @@ def analyze_commit_patterns(repo_path: str, days: int = 30, author: str | None =
     total_files = 0
     for commit in commits:
         author_counts[_extract_commit_author(commit)] += 1
-        total_files += len(commit["files"])
+        total_files += len(_get_value(commit, "files", []) or [])
 
     total_commits = len(commits)
     average = total_files / total_commits if total_commits else 0.0
