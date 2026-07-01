@@ -152,8 +152,13 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
 def analyze_commit_patterns(repo_path: str, days: int = 30, author: str | None = None) -> dict:
     """Summarize commit count, average file spread, and author participation."""
     repository = _resolve_repository(repo_path)
-    commits = repository.get_commits(days=days, author=None)
-    commits = _filter_commits_by_author(commits, author)
+    if author is None:
+        commits = repository.get_commits(days=days, author=None)
+    else:
+        commits = repository.get_commits(days=days, author=author)
+        if not commits:
+            commits = repository.get_commits(days=days, author=None)
+            commits = _filter_commits_by_author(commits, author)
 
     author_counts: dict[str, int] = defaultdict(int)
     total_files = 0
