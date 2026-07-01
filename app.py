@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 try:
     from mcp.server.fastmcp import FastMCP
 except ImportError:  # pragma: no cover - lightweight fallback for local checks
@@ -33,11 +31,9 @@ except ImportError:  # pragma: no cover - lightweight fallback for local checks
 
             return decorator
 
-        def run(self) -> None:
+        def run(self, transport: str | None = None) -> None:
             return None
 
-
-from analysis import analyze_commit_patterns, analyze_hotspots
 from git_utils import get_codeowners, get_repository_summary
 from security import validate_repo_path
 
@@ -69,11 +65,6 @@ def codeowners_resource() -> dict:
         "entries": get_codeowners(),
     }
 
-
-server.tool()(analyze_hotspots)
-server.tool()(analyze_commit_patterns)
-
-
 @server.prompt()
 def review_git_activity(repo_path: str) -> str:
     safe_repo_path = validate_repo_path(repo_path)
@@ -87,3 +78,6 @@ def review_git_activity(repo_path: str) -> str:
             "Compare the output with git-activity://teams/backend when ownership is unclear.",
         ]
     )
+
+
+import analysis  # noqa: E402,F401  # Registers @server.tool() decorators.
