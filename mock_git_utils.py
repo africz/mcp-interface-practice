@@ -4,34 +4,35 @@ from __future__ import annotations
 SAMPLE_COMMITS = [
     {
         "sha": "a1",
-        "author": "alice",
+        "author": "Alice",
         "branch": "main",
         "files": [
-            {"path": "src/main.py", "changes": 12},
+            {"path": "src/auth.py", "changes": 15},
+            {"path": "src/main.py", "changes": 4},
             {"path": "src/utils.py", "changes": 4},
         ],
     },
     {
         "sha": "a2",
-        "author": "bob",
+        "author": "Bob",
         "branch": "main",
         "files": [
-            {"path": "src/main.py", "changes": 7},
-            {"path": "src/api.py", "changes": 9},
+            {"path": "src/auth.py", "changes": 12},
+            {"path": "src/api.py", "changes": 5},
         ],
     },
     {
         "sha": "a3",
-        "author": "alice",
+        "author": "Alice",
         "branch": "main",
         "files": [
-            {"path": "src/api.py", "changes": 3},
-            {"path": "tests/test_api.py", "changes": 5},
+            {"path": "src/auth.py", "changes": 8},
+            {"path": "tests/test_auth.py", "changes": 6},
         ],
     },
     {
         "sha": "a4",
-        "author": "carol",
+        "author": "Carol",
         "branch": "release",
         "files": [
             {"path": "src/main.py", "changes": 2},
@@ -63,5 +64,5 @@ class MockGitRepository:
             "repo_path": self.repo_path,
             "branch": "main",
             "commit_count": len(SAMPLE_COMMITS),
-            "top_authors": ["alice", "bob", "carol"],
+            "top_authors": ["Alice", "Bob", "Carol"],
         }
