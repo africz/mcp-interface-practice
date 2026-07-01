@@ -28,29 +28,50 @@ def _normalize_author_text(value: Any) -> str:
     return text
 
 
+def _is_scalar_author_value(value: Any) -> bool:
+    return isinstance(value, (str, bytes, int, float))
+
+
+def _collect_author_values(value: Any) -> list[str]:
+    if not value:
+        return []
+
+    if _is_scalar_author_value(value):
+        normalized = _normalize_author_text(value)
+        return [normalized] if normalized else []
+
+    candidates: list[str] = []
+    if isinstance(value, dict):
+        for nested_key in ("name", "author", "login", "username", "email", "user"):
+            nested_value = value.get(nested_key)
+            if nested_value:
+                candidates.extend(_collect_author_values(nested_value))
+    else:
+        for nested_key in ("name", "author", "login", "username", "email", "user"):
+            nested_value = getattr(value, nested_key, None)
+            if nested_value:
+                candidates.extend(_collect_author_values(nested_value))
+
+    if candidates:
+        return candidates
+
+    normalized = _normalize_author_text(value)
+    return [normalized] if normalized else []
+
+
 def _author_candidates(commit: Any) -> list[str]:
     candidates: list[str] = []
 
     for key in ("author", "author_name", "name", "login", "username", "user"):
         value = _get_value(commit, key)
-        if not value:
-            continue
-        if isinstance(value, dict):
-            for nested_key in ("name", "author", "login", "username", "email"):
-                nested_value = value.get(nested_key)
-                if nested_value:
-                    candidates.append(_normalize_author_text(nested_value))
-        else:
-            candidates.append(_normalize_author_text(value))
+        if value:
+            candidates.extend(_collect_author_values(value))
 
     nested_commit = _get_value(commit, "commit")
     if nested_commit:
         nested_author = _get_value(nested_commit, "author")
         if nested_author:
-            for nested_key in ("name", "author", "login", "username", "email"):
-                nested_value = _get_value(nested_author, nested_key)
-                if nested_value:
-                    candidates.append(_normalize_author_text(nested_value))
+            candidates.extend(_collect_author_values(nested_author))
 
     normalized = [candidate for candidate in candidates if candidate]
     if not normalized:
