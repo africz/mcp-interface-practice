@@ -15,15 +15,39 @@ def _resolve_repository(repo_path: Any):
     return get_repository(safe_repo_path)
 
 
+def _extract_commit_author(commit: dict) -> str:
+    raw_author = commit.get("author", "")
+    if isinstance(raw_author, dict):
+        for key in ("name", "author", "login", "email"):
+            value = raw_author.get(key)
+            if value:
+                raw_author = value
+                break
+        else:
+            raw_author = ""
+
+    author_text = str(raw_author).strip()
+    if "<" in author_text:
+        author_text = author_text.split("<", 1)[0].strip()
+    return author_text
+
+
+def _author_matches(commit: dict, author: str) -> bool:
+    author_key = author.strip().casefold()
+    commit_author = _extract_commit_author(commit)
+    commit_key = commit_author.casefold()
+    full_key = str(commit.get("author", "")).strip().casefold()
+    return (
+        commit_key == author_key
+        or full_key == author_key
+        or full_key.startswith(f"{author_key} <")
+    )
+
+
 def _filter_commits_by_author(commits: list[dict], author: str | None) -> list[dict]:
     if author is None:
         return commits
-    author_key = author.strip().casefold()
-    return [
-        commit
-        for commit in commits
-        if str(commit.get("author", "")).strip().casefold() == author_key
-    ]
+    return [commit for commit in commits if _author_matches(commit, author)]
 
 
 @server.tool()
@@ -34,7 +58,7 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
 
     file_metrics: dict[str, dict[str, object]] = {}
     for commit in commits:
-        author = commit["author"]
+        author = _extract_commit_author(commit)
         for file_change in commit["files"]:
             path = file_change["path"]
             metric = file_metrics.setdefault(
@@ -82,7 +106,7 @@ def analyze_commit_patterns(repo_path: str, days: int = 30, author: str | None =
     author_counts: dict[str, int] = defaultdict(int)
     total_files = 0
     for commit in commits:
-        author_counts[commit["author"]] += 1
+        author_counts[_extract_commit_author(commit)] += 1
         total_files += len(commit["files"])
 
     total_commits = len(commits)
