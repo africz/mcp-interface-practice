@@ -30,7 +30,7 @@ class GitRepository:
         commits = []
         for commit in self.repo.iter_commits(rev=rev, max_count=20):
             author_name = getattr(commit.author, "name", "unknown")
-            if author and author_name != author:
+            if author and author_name.casefold() != author.casefold():
                 continue
             stats = commit.stats.files or {}
             files = [

@@ -56,7 +56,8 @@ class MockGitRepository:
         if branch is not None:
             commits = [commit for commit in commits if commit["branch"] == branch]
         if author is not None:
-            commits = [commit for commit in commits if commit["author"] == author]
+            author_key = author.casefold()
+            commits = [commit for commit in commits if commit["author"].casefold() == author_key]
         return list(commits)
 
     def get_summary(self) -> dict:

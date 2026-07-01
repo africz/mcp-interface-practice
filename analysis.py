@@ -35,7 +35,7 @@ def analyze_hotspots(repo_path: str, days: int = 30, branch: str | None = None) 
                 },
             )
             metric["authors"].add(author)
-            metric["changes"] = int(metric["changes"]) + int(file_change["changes"])
+            metric["changes"] = int(metric["changes"]) + 1
 
     hotspots = []
     for metric in file_metrics.values():
