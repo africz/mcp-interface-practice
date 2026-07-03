@@ -80,4 +80,4 @@ def review_git_activity(repo_path: str) -> str:
     )
 
 
-import analysis  # noqa: E402,F401  # Registers @server.tool() decorators.
+import tools  # noqa: E402,F401  # Registers @server.tool() decorators.
